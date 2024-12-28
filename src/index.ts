@@ -30,6 +30,7 @@ import { ensureAddressHasFunds } from "./utils";
 import { Resolver } from "did-resolver";
 import { MethodDigest, VerificationMethod } from "@iota/identity-wasm/node";
 
+
 export class DidIotaAdapter<K extends StorageSpec<Record<string, any>, any>>
   implements NetworkAdapter
 {
@@ -101,6 +102,7 @@ export class DidIotaAdapter<K extends StorageSpec<Record<string, any>, any>>
     );
     const hexSeed = "0x" + seed + publicKey;
     const API_ENDPOINT = "https://api.stardust-mainnet.iotaledger.net";
+
     const client = new Client({
       primaryNode: API_ENDPOINT,
       localPow: true,
