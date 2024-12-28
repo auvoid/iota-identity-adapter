@@ -11,7 +11,7 @@ import {
   stringToBytes,
   IdentityAccount,
   DidSigner,
-} from "../../ssimon/src";
+} from "@tanglelabs/ssimon";
 import Module from "node:module";
 const require = Module.createRequire(import.meta.url);
 import { getPublicKeyAsync } from "@noble/ed25519";
@@ -28,11 +28,8 @@ const {
 import * as didJWT from "did-jwt";
 import { ensureAddressHasFunds } from "./utils";
 import { Resolver } from "did-resolver";
-import {
-  Jwk,
-  MethodDigest,
-  VerificationMethod,
-} from "@iota/identity-wasm/node";
+import { MethodDigest, VerificationMethod } from "@iota/identity-wasm/node";
+
 
 export class DidIotaAdapter<K extends StorageSpec<Record<string, any>, any>>
   implements NetworkAdapter
@@ -104,8 +101,8 @@ export class DidIotaAdapter<K extends StorageSpec<Record<string, any>, any>>
       await getPublicKeyAsync(stringToBytes(seed))
     );
     const hexSeed = "0x" + seed + publicKey;
-    // const API_ENDPOINT = "https://api.stardust-mainnet.iotaledger.net";
-    const API_ENDPOINT = "https://api.testnet.shimmer.network/";
+    const API_ENDPOINT = "https://api.stardust-mainnet.iotaledger.net";
+
     const client = new Client({
       primaryNode: API_ENDPOINT,
       localPow: true,
