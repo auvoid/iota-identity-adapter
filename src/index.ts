@@ -1,393 +1,202 @@
 import {
-    IdentityAccount,
-    IdentityAccountProps,
-    CreateDidProps,
-    DidCreationResult,
-    NetworkAdapter,
-    NetworkAdapterOptions,
-    CreateCredentialProps,
-    CredentialsManager,
-    IVerificationResult,
-    StorageSpec,
-    IdentityConfig,
-    bytesToString,
-    stringToBytes,
-    CreateBadgeProps,
-} from "@tanglelabs/ssimon";
+  IdentityAccountProps,
+  CreateDidProps,
+  DidCreationResult,
+  NetworkAdapter,
+  NetworkAdapterOptions,
+  CredentialsManager,
+  StorageSpec,
+  IdentityConfig,
+  bytesToString,
+  stringToBytes,
+  IdentityAccount,
+  DidSigner,
+} from "../../ssimon/src";
 import Module from "node:module";
 const require = Module.createRequire(import.meta.url);
 import { getPublicKeyAsync } from "@noble/ed25519";
 import { IotaJwkStore, IotaKidStore } from "./iota-store";
+const { Client, SecretManager, Utils } = require("@iota/sdk-wasm/node");
 const {
-    AliasOutput,
-    Client,
-    SecretManager,
-    SeedSecretManager,
-    Utils,
-} = require("@iota/sdk-wasm/node");
-const {
-    IotaDID,
-    IotaDocument,
-    IotaIdentityClient,
-    Credential,
-    JwsAlgorithm,
-    MethodScope,
-    Storage,
-    JwsSignatureOptions,
-    Timestamp,
-    JwtCredentialValidator,
-    EdDSAJwsVerifier,
-    Jwt,
-    JwtPresentationOptions,
-    JwtCredentialValidationOptions,
-    FailFast,
-    Presentation,
+  IotaDID,
+  IotaDocument,
+  IotaIdentityClient,
+  JwsAlgorithm,
+  MethodScope,
+  Storage,
 } = require("@iota/identity-wasm/node");
+import * as didJWT from "did-jwt";
 import { ensureAddressHasFunds } from "./utils";
+import { Resolver } from "did-resolver";
+import {
+  Jwk,
+  MethodDigest,
+  VerificationMethod,
+} from "@iota/identity-wasm/node";
 
-export class IotaIdentityAdapter<
-    K extends StorageSpec<Record<string, any>, any>,
-    T extends IotaAccount<K>
-> implements NetworkAdapter
+export class DidIotaAdapter<K extends StorageSpec<Record<string, any>, any>>
+  implements NetworkAdapter
 {
-    store: StorageSpec<any, any>;
+  store: StorageSpec<any, any>;
+  resolver: Resolver;
 
-    private constructor() {}
+  private constructor() {}
 
-    getMethodIdentifier(): string {
-        return "iota";
+  getMethodIdentifier(): string {
+    return "iota";
+  }
+
+  public static async build(options: NetworkAdapterOptions) {
+    const adapter = new DidIotaAdapter();
+    adapter.store = options.driver;
+    adapter.resolver = options.resolver;
+    return adapter;
+  }
+
+  public async createDid(props: CreateDidProps): Promise<DidCreationResult> {
+    const { store, seed, alias } = props;
+    const generatedSeed = seed
+      ? seed
+      : Utils.mnemonicToHexSeed(Utils.generateMnemonic())
+          .split("0x")[1]
+          .substring(0, 64);
+    const config = await this.store.findOne({ alias });
+    const identity = await this.buildIotaAccount({
+      seed: config.seed ?? seed ?? generatedSeed,
+      isOld: !!seed,
+      alias: props.alias,
+      store: store,
+      extras: {
+        storage: this.store,
+      },
+    });
+    return {
+      identity,
+      seed: generatedSeed,
+    };
+  }
+
+  public async deserializeDid<T extends StorageSpec<Record<string, any>, any>>(
+    config: IdentityConfig,
+    store: T
+  ): Promise<DidCreationResult> {
+    const identity = await this.buildIotaAccount({
+      seed: config.seed as string,
+      isOld: true,
+      alias: config.alias,
+      store: store,
+      did: config.did,
+      extras: {
+        storage: this.store,
+      },
+    });
+
+    return { identity, seed: config.seed as string };
+  }
+
+  public async buildIotaAccount(
+    props: IdentityAccountProps<StorageSpec<any, any>> & { did?: string }
+  ) {
+    const { seed, isOld, store, extras, alias, did } = props;
+    const { storage } = extras;
+
+    const publicKey = bytesToString(
+      await getPublicKeyAsync(stringToBytes(seed))
+    );
+    const hexSeed = "0x" + seed + publicKey;
+    // const API_ENDPOINT = "https://api.stardust-mainnet.iotaledger.net";
+    const API_ENDPOINT = "https://api.testnet.shimmer.network/";
+    const client = new Client({
+      primaryNode: API_ENDPOINT,
+      localPow: true,
+    });
+    const didClient = new IotaIdentityClient(client);
+
+    // Get the Bech32 human-readable part (HRP) of the network.
+    const networkHrp: string = await didClient.getNetworkHrp();
+
+    const seedSecretManager = {
+      hexSeed,
+    };
+
+    // Generate a random mnemonic for our wallet.
+    const secretManager = new SecretManager(seedSecretManager);
+
+    const walletAddressBech32 = (
+      await secretManager.generateEd25519Addresses({
+        accountIndex: 0,
+        range: {
+          start: 0,
+          end: 1,
+        },
+        bech32Hrp: networkHrp,
+      })
+    )[0];
+
+    const identity = new IdentityAccount();
+
+    const jwkStore = await IotaJwkStore.build(storage, alias);
+    const kidStore = await IotaKidStore.build(storage, alias);
+
+    const iotaStorage: Storage = new Storage(jwkStore, kidStore);
+
+    let document: Record<string, any>;
+    if (!isOld) {
+      document = new IotaDocument(networkHrp);
+      await document.generateMethod(
+        iotaStorage,
+        IotaJwkStore.ed25519KeyType(),
+        JwsAlgorithm.EdDSA,
+        "#key-1",
+        MethodScope.VerificationMethod()
+      );
+      const address = Utils.parseBech32Address(walletAddressBech32);
+      const aliasOutput = await didClient.newDidOutput(address, document);
+
+      await ensureAddressHasFunds(
+        client,
+        walletAddressBech32,
+        aliasOutput.amount,
+        seed
+      );
+      const publishedDoc = await didClient.publishDidOutput(
+        seedSecretManager,
+        aliasOutput
+      );
+      document = JSON.parse(publishedDoc);
+    } else {
+      document = await didClient.resolveDid(IotaDID.parse(did));
     }
 
-    public static async build(options: NetworkAdapterOptions) {
-        const adapter = new IotaIdentityAdapter();
-        adapter.store = options.driver;
-        return adapter;
-    }
+    document = JSON.parse(JSON.stringify(document));
 
-    public async createDid<T extends StorageSpec<any, any>>(
-        props: CreateDidProps<T>
-    ): Promise<DidCreationResult> {
-        const { store, seed, alias } = props;
-        const generatedSeed = seed
-            ? seed
-            : Utils.mnemonicToHexSeed(Utils.generateMnemonic())
-                  .split("0x")[1]
-                  .substring(0, 64);
-        const config = await this.store.findOne({ alias });
-        const identity = await IotaAccount.build({
-            seed: config.seed ?? seed ?? generatedSeed,
-            isOld: !!seed,
-            alias: props.alias,
-            store: store,
-            extras: {
-                storage: this.store,
-            },
-        });
-        return {
-            identity,
-            seed: generatedSeed,
-        };
-    }
+    const verificationMethod = VerificationMethod.fromJSON(
+      document.verificationMethod[0]
+    );
+    const methodDigest = new MethodDigest(verificationMethod);
+    const keyId = await kidStore.getKeyId(methodDigest);
+    const privateKeyHex = await jwkStore.getPrivateKeyFromStore(keyId);
 
-    public async deserializeDid<
-        T extends StorageSpec<Record<string, any>, any>
-    >(config: IdentityConfig, store: T): Promise<DidCreationResult> {
-        const identity = await IotaAccount.build({
-            seed: config.seed as string,
-            isOld: true,
-            alias: config.alias,
-            store: store,
-            did: config.did,
-            extras: {
-                storage: this.store,
-            },
-        });
+    const iotaEdDSASigner = didJWT.EdDSASigner(privateKeyHex);
 
-        return { identity, seed: config.seed as string };
-    }
-}
+    const signer: DidSigner = {
+      signer: iotaEdDSASigner,
+      kid: `did#key-1` as `did:${string}`,
+      did: did as `did:${string}`,
+      alg: "EdDSA",
+    };
+    identity.document = JSON.parse(JSON.stringify(document));
+    const credentialsManager = CredentialsManager.build(
+      store,
+      signer,
+      this.resolver
+    );
+    identity.credentials = credentialsManager;
+    identity.signer = signer;
 
-export class IotaAccount<T extends StorageSpec<Record<string, any>, any>>
-    implements IdentityAccount
-{
-    credentials: IotaCredentialsManager<T>;
-    document: IotaDocument;
-    didClient: IotaIdentityClient;
-    private walletAddr: string;
-    private did: string;
-    private tempDid: string;
-    private storage: Storage;
-
-    private constructor() {}
-
-    async createPresentation(
-        credentials: string[]
-    ): Promise<Record<string, any>> {
-        const unsigned = new Presentation({
-            holder: this.document.id(),
-            verifiableCredential: credentials,
-        });
-
-        const presentationJwt = await this.document.createPresentationJwt(
-            this.storage,
-            "#key-1",
-            unsigned,
-            new JwsSignatureOptions({}),
-            new JwtPresentationOptions({})
-        );
-
-        return {
-            presentationJwt: presentationJwt.toString(),
-            vpPayload: presentationJwt.toJSON(),
-        };
-    }
-
-    public getStorage() {
-        return this.storage;
-    }
-
-    public static async build<T extends StorageSpec<Record<string, any>, any>>(
-        props: IdentityAccountProps<T> & { did?: string }
-    ) {
-        const { seed, isOld, store, extras, alias, did } = props;
-        const { storage } = extras;
-
-        const publicKey = bytesToString(
-            await getPublicKeyAsync(stringToBytes(seed))
-        );
-        const hexSeed = "0x" + seed + publicKey;
-
-        const API_ENDPOINT = "https://api.stardust-mainnet.iotaledger.net";
-        const client = new Client({
-            primaryNode: API_ENDPOINT,
-            localPow: true,
-        });
-        const didClient = new IotaIdentityClient(client);
-
-        // Get the Bech32 human-readable part (HRP) of the network.
-        const networkHrp: string = await didClient.getNetworkHrp();
-
-        const seedSecretManager = {
-            hexSeed,
-        };
-
-        // Generate a random mnemonic for our wallet.
-        const secretManager = new SecretManager(seedSecretManager);
-
-        const walletAddressBech32 = (
-            await secretManager.generateEd25519Addresses({
-                accountIndex: 0,
-                range: {
-                    start: 0,
-                    end: 1,
-                },
-                bech32Hrp: networkHrp,
-            })
-        )[0];
-
-        const identity = new IotaAccount();
-        identity.walletAddr = walletAddressBech32;
-        identity.didClient = didClient;
-
-        const jwkStore = await IotaJwkStore.build(storage, alias);
-        const kidStore = await IotaKidStore.build(storage, alias);
-
-        const iotaStorage: Storage = new Storage(jwkStore, kidStore);
-
-        identity.storage = iotaStorage;
-
-        let document: IotaDocument;
-        if (!isOld) {
-            document = new IotaDocument(networkHrp);
-            await document.generateMethod(
-                iotaStorage,
-                IotaJwkStore.ed25519KeyType(),
-                JwsAlgorithm.EdDSA,
-                "#key-1",
-                MethodScope.VerificationMethod()
-            );
-            const address = Utils.parseBech32Address(walletAddressBech32);
-            const aliasOutput = await didClient.newDidOutput(address, document);
-
-            await ensureAddressHasFunds(
-                client,
-                walletAddressBech32,
-                aliasOutput.amount,
-                seed
-            );
-            document = await didClient.publishDidOutput(
-                seedSecretManager,
-                aliasOutput
-            );
-        } else {
-            document = await didClient.resolveDid(IotaDID.parse(did));
-        }
-        identity.document = document;
-        const credentialsManager = await IotaCredentialsManager.build(
-            store,
-            identity
-        );
-        identity.credentials = credentialsManager;
-
-        return identity;
-    }
-
-    public getDid(): string {
-        return this.document ? this.document.id().toString() : this.tempDid;
-    }
-    public getDocument(): Record<string, any> {
-        return this.document.toJSON();
-    }
-}
-
-export class IotaCredentialsManager<
-    T extends StorageSpec<Record<string, any>, any>
-> implements CredentialsManager<T>
-{
-    store: T;
-    account: IotaAccount<T>;
-
-    async createBadge(options: CreateBadgeProps): Promise<Record<string, any>> {
-        const {
-            id,
-            recipientDid,
-            body,
-            type,
-            image,
-            issuerName,
-            badgeName,
-            criteria,
-            description,
-            expiryDate,
-        } = options;
-
-        const types = Array.isArray(type) ? [...type] : [type];
-        const extras = options.extras ?? {};
-        const expiryString = expiryDate
-            ? new Date(expiryDate).toISOString()
-            : "";
-        const credential = new Credential({
-            id: recipientDid,
-            context: [
-                "https://www.w3.org/2018/credentials/v1",
-                "https://purl.imsglobal.org/spec/ob/v3p0/schema/json/ob_v3p0_achievementcredential_schema.json",
-            ],
-            ...extras,
-            name: type,
-            issuer: {
-                id: new URL("/", id).toString(),
-                type: ["Profile"],
-                name: issuerName,
-            },
-            type: types,
-            issuanceDate: Timestamp.parse(new Date(Date.now()).toISOString()),
-            expirationDate: expiryString
-                ? Timestamp.parse(expiryString)
-                : undefined,
-            credentialSubject: {
-                type: ["AchievementSubject"],
-                achievement: {
-                    id: id,
-                    type: "",
-                    criteria: {
-                        narrative: criteria,
-                    },
-                    name: badgeName,
-                    description: description,
-                    image: {
-                        id: image,
-                        type: "Image",
-                    },
-                    ...body,
-                },
-            },
-        });
-
-        const credentialJwt = (
-            await this.account.document.createCredentialJwt(
-                this.account.getStorage(),
-                "#key-1",
-                credential,
-                new JwsSignatureOptions()
-            )
-        ).toString();
-
-        return { cred: credentialJwt };
-    }
-
-    public static async build<T extends StorageSpec<Record<string, any>, any>>(
-        store: T,
-        account: IotaAccount<T>
-    ) {
-        const credentialsManager = new IotaCredentialsManager();
-        credentialsManager.store = store;
-        credentialsManager.account = account;
-        return credentialsManager;
-    }
-
-    public async isCredentialValid(
-        cred: Record<string, unknown>
-    ): Promise<boolean> {
-        const issuer = JwtCredentialValidator.extractIssuerFromJwt(
-            new Jwt(cred.cred as string)
-        );
-
-        const issuerDocument = await this.account.didClient.resolveDid(
-            IotaDID.parse(issuer.toString())
-        );
-        const decoded_credential = new JwtCredentialValidator(
-            new EdDSAJwsVerifier()
-        ).validate(
-            new Jwt(cred.cred as string),
-            issuerDocument,
-            new JwtCredentialValidationOptions(),
-            FailFast.FirstError
-        );
-
-        return true;
-    }
-    public async verify(
-        cred: Record<string, unknown>
-    ): Promise<IVerificationResult> {
-        return { vc: await this.isCredentialValid(cred), dvid: true };
-    }
-    public async create(
-        props: CreateCredentialProps
-    ): Promise<Record<string, any>> {
-        const { id, recipientDid, body, type, expiryDate, extras } = props;
-
-        const subject = {
-            id: recipientDid,
-            ...body,
-        };
-
-        const expiryString = expiryDate
-            ? new Date(expiryDate).toISOString()
-            : "";
-        // Create an unsigned `UniversityDegree` credential for Alice
-        const unsignedVc = new Credential({
-            id,
-            type,
-            issuer: this.account.getDid(),
-            credentialSubject: subject,
-            expirationDate: expiryString
-                ? Timestamp.parse(expiryString)
-                : undefined,
-            ...extras,
-        });
-
-        // Create signed JWT credential.
-        const credentialJwt = (
-            await this.account.document.createCredentialJwt(
-                this.account.getStorage(),
-                "#key-1",
-                unsignedVc,
-                new JwsSignatureOptions()
-            )
-        ).toString();
-
-        return { cred: credentialJwt };
-    }
+    return identity;
+  }
 }
 
 export * from "./iota-store";
+export * from "./iota-resolver";
