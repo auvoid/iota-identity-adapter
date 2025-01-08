@@ -23,8 +23,8 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
       '@tanglelabs/ssimon':
-        specifier: 0.8.1
-        version: 0.8.1
+        specifier: 0.8.3
+        version: 0.8.3
       did-jwt:
         specifier: ^7.4.7
         version: 7.4.7
@@ -585,8 +585,8 @@ packages:
   '@sphereon/ssi-types@0.9.0':
     resolution: {integrity: sha512-umCr/syNcmvMMbQ+i/r/mwjI1Qw2aFPp9AwBTvTo1ailAVaaJjJGPkkVz1K9/2NZATNdDiQ3A8yGzdVJoKh9pA==}
 
-  '@tanglelabs/ssimon@0.8.1':
-    resolution: {integrity: sha512-cn7Gj2emibqXVOKeSrAg8CqlwegH2CH0FuXKgAl9Eq30I/2G60GEPD3lZCMx+GDOmGyEepxLIAKFqlvf5WX6vw==}
+  '@tanglelabs/ssimon@0.8.3':
+    resolution: {integrity: sha512-ymnPVyDP4tdZEzZA71AEmcezPwzbpstHDVDVV5ZDhfosqGLyQ44gbpvYuGPRP/sWJUeLgmNTnbL+CJjfhsaLMA==}
 
   '@tsconfig/node10@1.0.11':
     resolution: {integrity: sha512-DcRjDCujK/kCk/cUe8Xz8ZSpm8mS3mNNpta+jGCA6USEDfktlNvm1+IuZ9eTcDbNk41BHwpHHeW+N1lKCz4zOw==}
@@ -1962,6 +1962,10 @@ packages:
   jwt-decode@3.1.2:
     resolution: {integrity: sha512-UfpWE/VZn0iP50d8cz9NrZLM9lSWhcJ+0Gt/nm4by88UL+J1SiKN8/5dkjMmbEzwL2CAe+67GsegCbIKtbp75A==}
 
+  key-did-resolver@4.0.0:
+    resolution: {integrity: sha512-+U2nd/0rjO4Yqe2hnHBD7ygcLRfT43Oje9IIjv1BlBi0lopwxZpIFQ7GekguOHK02r+JGdl8mpJVNHs5lvXVOA==}
+    engines: {node: '>=14.14'}
+
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
 
@@ -2171,6 +2175,9 @@ packages:
     resolution: {integrity: sha512-x23pDe5+svdLz/k5JPGCVdfn7Q5mZVMBETiC+ORfO+sor9Sgs0smJzAjfTbM5tckeCqnaUuMYoz+k3RXMmJClQ==}
     engines: {node: '>=12.0.0', npm: '>=6.0.0'}
     deprecated: This module has been superseded by the multiformats module
+
+  multiformats@13.3.1:
+    resolution: {integrity: sha512-QxowxTNwJ3r5RMctoGA5p13w5RbRT2QDkoM+yFlqfLiioBp78nhDjnRLvmSBI9+KAqN4VdgOVWM9c0CHd86m3g==}
 
   multiformats@9.9.0:
     resolution: {integrity: sha512-HoMUjhH9T8DDBNT+6xzkrd9ga/XiBI4xLr58LJACwK6G3HTOPeMz4nB4KJs33L2BelrIJa7P0VuNaVF3hMYfjg==}
@@ -3028,6 +3035,9 @@ packages:
   uint8arrays@3.1.1:
     resolution: {integrity: sha512-+QJa8QRnbdXVpHYjLoTpJIdCTiw9Ir62nocClWuXIq2JIh4Uta0cQsTSpFL678p2CN8B+XSApwcU+pQEqVpKWg==}
 
+  uint8arrays@5.1.0:
+    resolution: {integrity: sha512-vA6nFepEmlSKkMBnLBaUMVvAC4G3CTmO58C12y4sq6WPDOR7mOFYOi7GlrQ4djeSbP6JG9Pv9tJDM97PedRSww==}
+
   undefsafe@2.0.5:
     resolution: {integrity: sha512-WxONCrssBM8TSPRqN5EmsjVrsv4A8X12J4ArBiiayv3DyyG3ZlIg6yysuuSYdZsVz3TKcTg2fd//Ujd4CHV1iA==}
 
@@ -3072,6 +3082,9 @@ packages:
 
   validate-npm-package-license@3.0.4:
     resolution: {integrity: sha512-DpKm2Ui/xN7/HQKCtpZxoRWBhZ9Z0kqtygG8XCgNQ8ZlDnxuQmWhj566j8fN4Cu3/JmbhsDo7fcAJq4s9h27Ew==}
+
+  varint@6.0.0:
+    resolution: {integrity: sha512-cXEIW6cfr15lFv563k4GuVuW/fiwjknytD37jIOLSdSWuOI6WnO/oKwmP2FQTU2l01LP8/M5TSAJpzUaGe3uWg==}
 
   walk-back@2.0.1:
     resolution: {integrity: sha512-Nb6GvBR8UWX1D+Le+xUq0+Q1kFmRBIWVrfLnQAOmcpEzA9oAxwJ9gIr36t9TWYfzvWRvuMtjHiVsJYEkXWaTAQ==}
@@ -3876,7 +3889,7 @@ snapshots:
     dependencies:
       jwt-decode: 3.1.2
 
-  '@tanglelabs/ssimon@0.8.1':
+  '@tanglelabs/ssimon@0.8.3':
     dependencies:
       '@sd-jwt/crypto-nodejs': 0.9.1
       '@sd-jwt/sd-jwt-vc': 0.9.1
@@ -3887,6 +3900,7 @@ snapshots:
       did-jwt-vc: 4.0.4
       did-resolver: 4.1.0
       jsonschema: 1.4.1
+      key-did-resolver: 4.0.0
     transitivePeerDependencies:
       - supports-color
 
@@ -5574,6 +5588,13 @@ snapshots:
 
   jwt-decode@3.1.2: {}
 
+  key-did-resolver@4.0.0:
+    dependencies:
+      '@noble/curves': 1.7.0
+      multiformats: 13.3.1
+      uint8arrays: 5.1.0
+      varint: 6.0.0
+
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
@@ -5765,6 +5786,8 @@ snapshots:
   multibase@4.0.6:
     dependencies:
       '@multiformats/base-x': 4.0.1
+
+  multiformats@13.3.1: {}
 
   multiformats@9.9.0: {}
 
@@ -6508,6 +6531,10 @@ snapshots:
     dependencies:
       multiformats: 9.9.0
 
+  uint8arrays@5.1.0:
+    dependencies:
+      multiformats: 13.3.1
+
   undefsafe@2.0.5: {}
 
   underscore@1.13.7: {}
@@ -6548,6 +6575,8 @@ snapshots:
     dependencies:
       spdx-correct: 3.2.0
       spdx-expression-parse: 3.0.1
+
+  varint@6.0.0: {}
 
   walk-back@2.0.1: {}
 
