@@ -10,10 +10,9 @@ import {
   JwkStorage,
   KeyIdStorage,
   MethodDigest,
-} from "@iota/identity-wasm/node";
-import { bytesToString, StorageSpec } from "@tanglelabs/ssimon";
+} from "@iota/identity-wasm/node/index.js";
+import { StorageSpec } from "@tanglelabs/ssimon";
 import { nanoid } from "nanoid";
-import { bytesToHex } from "did-jwt";
 
 type Ed25519PrivateKey = Uint8Array;
 type Ed25519PublicKey = Uint8Array;

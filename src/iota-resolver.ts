@@ -8,7 +8,7 @@ import {
   IotaIdentityClient,
   Resolver,
   CoreDocument,
-} from "@iota/identity-wasm/node";
+} from "@iota/identity-wasm/node/index.js";
 
 export class IotaResolver {
   public static getResolver() {
