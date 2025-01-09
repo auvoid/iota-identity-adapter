@@ -16,20 +16,20 @@ import Module from "node:module";
 const require = Module.createRequire(import.meta.url);
 import { getPublicKeyAsync } from "@noble/ed25519";
 import { IotaJwkStore, IotaKidStore } from "./iota-store";
-const { Client, SecretManager, Utils } = require("@iota/sdk-wasm/node");
-const {
+import { Client, SecretManager, Utils } from "@iota/sdk-wasm/node";
+import {
   IotaDID,
   IotaDocument,
   IotaIdentityClient,
   JwsAlgorithm,
   MethodScope,
+  MethodDigest,
+  VerificationMethod,
   Storage,
-} = require("@iota/identity-wasm/node");
+} from "@iota/identity-wasm/node/index.js";
 import * as didJWT from "did-jwt";
 import { ensureAddressHasFunds } from "./utils";
 import { Resolver } from "did-resolver";
-import { MethodDigest, VerificationMethod } from "@iota/identity-wasm/node";
-
 
 export class DidIotaAdapter<K extends StorageSpec<Record<string, any>, any>>
   implements NetworkAdapter
