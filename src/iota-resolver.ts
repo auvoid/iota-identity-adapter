@@ -1,4 +1,4 @@
-import { Client } from "@iota/sdk-wasm/node";
+import { Client } from "@iota/sdk-wasm/node/lib/index.js";
 import {
   type DIDResolutionOptions,
   type DIDDocument,

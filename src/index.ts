@@ -16,7 +16,7 @@ import Module from "node:module";
 const require = Module.createRequire(import.meta.url);
 import { getPublicKeyAsync } from "@noble/ed25519";
 import { IotaJwkStore, IotaKidStore } from "./iota-store";
-import { Client, SecretManager, Utils } from "@iota/sdk-wasm/node";
+import { Client, SecretManager, Utils } from "@iota/sdk-wasm/node/lib/index.js";
 import {
   IotaDID,
   IotaDocument,
