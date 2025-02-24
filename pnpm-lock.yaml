@@ -23,8 +23,8 @@ importers:
         specifier: ^2.1.0
         version: 2.1.0
       '@tanglelabs/ssimon':
-        specifier: 0.8.3
-        version: 0.8.3
+        specifier: 1.0.0
+        version: 1.0.0
       did-jwt:
         specifier: ^7.4.7
         version: 7.4.7
@@ -585,8 +585,8 @@ packages:
   '@sphereon/ssi-types@0.9.0':
     resolution: {integrity: sha512-umCr/syNcmvMMbQ+i/r/mwjI1Qw2aFPp9AwBTvTo1ailAVaaJjJGPkkVz1K9/2NZATNdDiQ3A8yGzdVJoKh9pA==}
 
-  '@tanglelabs/ssimon@0.8.3':
-    resolution: {integrity: sha512-ymnPVyDP4tdZEzZA71AEmcezPwzbpstHDVDVV5ZDhfosqGLyQ44gbpvYuGPRP/sWJUeLgmNTnbL+CJjfhsaLMA==}
+  '@tanglelabs/ssimon@1.0.0':
+    resolution: {integrity: sha512-E4WJNiD8eaqmDMLC3WIw2dBlqDPDElGyFa1HL9S3D9lgwxpvyXs4fk1+rSwvXQ68Ml+Z9ib04EoacKXidTvkRQ==}
 
   '@tsconfig/node10@1.0.11':
     resolution: {integrity: sha512-DcRjDCujK/kCk/cUe8Xz8ZSpm8mS3mNNpta+jGCA6USEDfktlNvm1+IuZ9eTcDbNk41BHwpHHeW+N1lKCz4zOw==}
@@ -3889,7 +3889,7 @@ snapshots:
     dependencies:
       jwt-decode: 3.1.2
 
-  '@tanglelabs/ssimon@0.8.3':
+  '@tanglelabs/ssimon@1.0.0':
     dependencies:
       '@sd-jwt/crypto-nodejs': 0.9.1
       '@sd-jwt/sd-jwt-vc': 0.9.1
